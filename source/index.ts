@@ -1,7 +1,55 @@
 import 'reflect-metadata';
 
+import G from 'glob';
+import { Client, ClientOptions } from 'discordx';
+import { Intents } from 'discord.js';
+
+import { Env } from './utils/env';
+import { resolve } from 'path';
+
+export const DEBUG = Env.getBoolean('DEBUG');
+
 async function main(): Promise<void> {
-  console.log('Hello world!');
+  await startClient();
+}
+
+const CLIENT_MODULES_GLOB = resolve(__dirname, 'modules', '**', '*.ts');
+
+const CLIENT_INTENTS: number[] = [
+  Intents.FLAGS.GUILDS,
+  Intents.FLAGS.GUILD_MESSAGES,
+  Intents.FLAGS.GUILD_MEMBERS,
+];
+
+async function startClient(): Promise<void> {
+  const client = new Client({
+    intents: CLIENT_INTENTS,
+  });
+
+  if (process.env.NODE_ENV === 'development' && !Env.getBoolean('DISABLE_GUILDED_COMMANDS')) {
+    // Registers the commands as guilded commands, this is faster but doesn't use this in
+    // production because it's only registers the commands when the bot is ready.
+    (<ClientOptions>client.options).botGuilds = [
+      async (client: Client) => {
+        const guilds = await client.guilds.fetch();
+        return guilds.map(guild => guild.id);
+      },
+    ];
+
+    if (DEBUG) {
+      console.log(
+        '[index.startClient] The commands will be registered as guilded commands because the' +
+          'process is in development mode.'
+      );
+    }
+  }
+
+  await recursiveImportPath(CLIENT_MODULES_GLOB);
+  await client.login(Env.getString('DISCORDJS_TOKEN'));
+}
+
+async function recursiveImportPath(glob: string): Promise<void> {
+  await Promise.all(G.sync(glob).map(async file => await import(file)));
 }
 
 if (require.main === module) {
