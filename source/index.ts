@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 
 import G from 'glob';
-import { Client, ClientOptions } from 'discordx';
 import { Intents } from 'discord.js';
+import { Client, ClientOptions } from 'discordx';
 
-import { Env } from './utils/env';
 import { resolve } from 'path';
+import { Env } from './utils/env';
 
 export const DEBUG = Env.getBoolean('DEBUG');
 
